@@ -1,0 +1,589 @@
+---
+title: "Index Investments (IQ)"
+author: "Brian Maja"
+date: "30/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+ 
+knitr::opts_chunk$set(echo = TRUE)
+```
+   
+  
+```{r , include=FALSE}
+library(dplyr) 
+library(tidyverse) 
+library(readxl)  
+library(rhandsontable) 
+library(purrr) 
+library(plotly)
+library(scipub)
+```
+
+
+__Source data Preview__
+  
+```{r}
+# souce file
+TOP40 = read.csv('TOP40.csv')
+
+# rhandsontable to preview tables
+rhandsontable(TOP40,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T) 
+```
+
+### __Task 1__  
+
+Number of rows in the dataset    
+  
+```{r} 
+#count number or rows
+NROW(TOP40)
+```
+  
+Number of variables (excluding date and Ticker)  
+  
+```{r} 
+
+data_output = TOP40 %>% #source original data
+              select(!c(date,Ticker)) #exclude date and Ticker columns
+NCOL(data_output)
+```
+  
+Percentage of values for each variable (excluding date and Ticker) the are missing/not available  
+    
+```{r}
+ 
+sample_list = TOP40 %>% #source original data
+              select(!c(date,Ticker))%>%  #exclude date and Ticker
+              map(~ mean(is.na(.))) #use map to apply function mean NA of all column list
+ 
+max_len = max(lengths(sample_list))
+df =  purrr::map_df(sample_list, ~ c(., rep('', max_len - length(.)))) #maps the list to dataframe
+
+#output dataframe
+rhandsontable(df,height = "10vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)  
+```
+  
+### __Task 2__  
+   
+Calculate and plot the number of stocks available for analysis over all dates  
+  
+Table output  
+  
+```{r}
+#confirm both Date and ticker have same number of observations
+NROW(TOP40$Ticker)
+NROW(TOP40$date)
+
+data_output_1 = TOP40 %>% #source original data
+              group_by(date) %>% #group by date
+              summarise(n = n()) #count frequency
+
+#output dataframe
+rhandsontable(data_output_1,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)  
+```
+  
+Plot output  
+  
+```{r}
+
+#output plot 
+plot_output_1 = ggplot(data_output_1, aes(x = as.Date(date), y = n))+ 
+                geom_line( colour = 'blue' )+ 
+                ylab("Number of stocks available for analysis")+
+                xlab("Date")
+
+ggplotly(plot_output_1)
+
+```
+  
+
+### __Task 3__    
+  
+For the month of June 2002, which are the 10 stocks with the highest ROE
+
+```{r}
+ 
+highest_ROE_output = TOP40 %>% #source original data
+                      subset(date == "2002-06-30") %>% #subset data to June 2002
+                      slice_max(ROE, n = 10) #pick top 10 based on maximum ROE
+
+#output dataframe
+rhandsontable(highest_ROE_output,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T) 
+
+```
+  
+### __Task 4__   
+  
+Calculate and and plot the average monthly value of X3MAvgDailyValueTradedUSD over all dates.
+(X3MAvgDailyValueTradedUSD is the average daily value traded over the previous 3 months for each
+stock)
+   
+__Table output__    
+   
+```{r}
+X3MAvgDailyValueTradedUSD_data = TOP40 %>% #source original data
+                                 group_by(date) %>%  #group by month
+                                 summarise(X3MAvgDailyValueTradedUSD = mean(X3MAvgDailyValueTradedUSD)) #average of the X3MAvgDailyValueTradedUSD
+
+#output dataframe
+rhandsontable(X3MAvgDailyValueTradedUSD_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T) 
+```
+  
+__Plot output__    
+  
+```{r}
+ 
+#output plot
+X3MAvgDailyValueTradedUSD_plot <- plot_ly(X3MAvgDailyValueTradedUSD_data,x = ~as.Date(date), y = ~X3MAvgDailyValueTradedUSD, type = 'scatter', 
+               mode = 'lines',fill = 'tozeroy')%>% 
+  layout(showlegend = F, title = 'The average daily value traded over the previous 3 months',
+         xaxis = list(title = 'Date'),yaxis = list(title = '3-Months Average Daily Value Traded in USD'),
+         plot_bgcolor='#e5ecf6')
+
+X3MAvgDailyValueTradedUSD_plot
+```
+  
+Commentary:  
+  
+There has been an increase in the liquidity of the top40 traded stocks over the years.  
+   
+### __Task 5__   
+  
+Calculate and plot the average monthly value of ROE over all dates.
+  
+__Table output__  
+  
+```{r}
+ROE_data = TOP40 %>% #source original data
+            group_by(date) %>%  #group by month
+            summarise(ROE = mean(ROE,na.rm = T)) #average of the ROE
+
+#output dataframe
+rhandsontable(ROE_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T) 
+```
+  
+__Plot output__    
+  
+```{r} 
+ 
+#output plot
+ROE_plot <- plot_ly(ROE_data,x = ~as.Date(date), y = ~ROE, type = 'scatter', mode = 'lines')%>% 
+              layout(showlegend = F, title = 'The average monthly value of ROE',
+              xaxis = list(title = 'Date'),yaxis = list(title = 'Average monthly value of ROE'),
+              plot_bgcolor='#e5ecf6')
+
+ROE_plot
+
+```
+
+  
+Commentary:  
+  
+There has been a steady decline in the Return on Equity/ROE since the year 2014, this basically means that the top40 have generally not been performing well.  
+    
+### __Task 6__   
+  
+Confirm that the Market Cap weights (MarketCapUSD) for each date, over all dates sum to 100%  
+  
+```{r}
+MarketCapUSD_data = TOP40 %>% #source orginal data
+                    group_by(date) %>%  #group by month
+                    summarise(MarketCapUSD = sum(MarketCapUSD,na.rm = T)) #sum MarketCapUSD excluding NA
+
+#output dataframe
+rhandsontable(MarketCapUSD_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T) 
+```
+  
+__Commentary:__    
+  
+We can see from above that the Market Cap weights does not sum to 100%, we will proceed with normalizing it to 100% below  
+  
+```{r}
+
+MarketCapUSD_data_norm = TOP40 %>% #source original data
+                          group_by(date) %>%  #group by month
+                          summarise(MarketCapUSD = sum(MarketCapUSD,na.rm = T)) %>%  #sum MarketCapUSD excluding NA
+                          mutate(MarketCapUSD_Normalised = MarketCapUSD/max(MarketCapUSD) * 100) #normalise MarketCapUSD
+
+#output dataframe
+rhandsontable(MarketCapUSD_data_norm,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)  
+``` 
+  
+__Normalised Market Cap plot__  
+  
+  
+```{r} 
+#output plot
+fig <- plot_ly(MarketCapUSD_data_norm,x = ~as.Date(date), y = ~MarketCapUSD_Normalised, type = 'scatter', 
+               mode = 'lines')%>% 
+  layout(showlegend = F, title = 'The Market Cap weights',
+         xaxis = list(title = 'Date'),yaxis = list(title = 'Normalised Market Cap weights in %'),
+         plot_bgcolor='#e5ecf6')
+
+fig
+
+```  
+    
+### __Task 7__  
+   
+   
+Instead of using the average weight (in other words, equally weighted), please use the market cap
+weights you calculated in Task 6 to calculate the Market Cap Weighted ROE for the TOP40 for each
+month, and plot the result for all dates  
+
+Since the question was not explicit as to which weighting to use, I used the not normalised MarketCapUSD
+ 
+__Table output__   
+  
+```{r}
+Market_Cap_Weighted_ROE_data = TOP40 %>% #source orginal data
+                                group_by(date) %>%  #group by month
+                                summarise(MarketCapUSD_ROE = sum(MarketCapUSD*ROE,na.rm = T)) #sum product of MarketCapUSD and ROE excluding NA  
+
+#table output
+rhandsontable(Market_Cap_Weighted_ROE_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T) 
+```    
+
+__Plot output__
+
+```{r} 
+#plot output
+Market_Cap_Weighted_ROE_plot <- plot_ly(Market_Cap_Weighted_ROE_data,x = ~as.Date(date), y = ~MarketCapUSD_ROE, type = 'scatter', 
+               mode = 'lines')%>% 
+                layout(showlegend = F, title = 'The Market Cap Weighted ROE for the TOP40',
+                  xaxis = list(title = 'Date'),yaxis = list(title = 'Market Cap Weighted ROE for the TOP40'),
+                  plot_bgcolor='#e5ecf6')
+
+Market_Cap_Weighted_ROE_plot
+
+```   
+   
+### __Task 8__  
+  
+Instead of using the average weight (in other words, equally weighted), please use the market cap
+weights you calculated in Task 6 to calculate the Market Cap Weighted Return over the next month
+(RON1m) for the TOP40 for each month, and plot the result for all dates  
+   
+__Table output__       
+   
+```{r}
+marketcapusd_ron1m_data = TOP40 %>% #source original data
+                          group_by(date) %>% #group by month
+                          summarise(MarketCapUSD_RON1m = sum(MarketCapUSD*RON1m,na.rm = T))  #sum product of MarketCapUSD and RON1m excluding NA  
+
+#output table
+rhandsontable(marketcapusd_ron1m_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)
+```  
+  
+__Plot output__         
+   
+```{r}  
+#plot output
+fig <- plot_ly(marketcapusd_ron1m_data,x = ~as.Date(date), y = ~MarketCapUSD_RON1m, type = 'scatter', 
+               mode = 'lines')%>% 
+               layout(showlegend = F, title = 'The Market Cap Weighted Return over the next month (RON1m) for the TOP40',
+                xaxis = list(title = 'Date'),yaxis = list(title = 'Market Cap Weighted Return over the next month (RON1m) '),
+                 plot_bgcolor='#e5ecf6')
+
+fig
+ 
+
+``` 
+
+### __Task 8b (Bonus Question)__  
+    
+Using the result from Step 8, plot the value of R1 invested at the start of the analysis in the Market
+Cap Weighted portfolio, over time.  
+
+__Table output__  
+  
+```{r}
+
+R1investmentMWP_data = TOP40 %>% #source original data
+                        group_by(date) %>%  #group by month
+                        summarise(MarketCapUSD_RON1m = sum(MarketCapUSD*RON1m,na.rm = T))%>%   #sum product of MarketCapUSD and RON1m excluding NA  
+                          mutate(MarketCapUSD_RON1m_Overtime = 1+cumsum(MarketCapUSD_RON1m))#cummulative sum with 1 rands investment
+#table output
+rhandsontable(R1investmentMWP_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)
+```  
+  
+__Table output__  
+  
+  
+R1 invested at the start of 2002 will be R2.9251208 at the end of the duration
+  
+```{r}
+#plot output
+fig <- plot_ly(R1investmentMWP_data,x = ~as.Date(date), y = ~MarketCapUSD_RON1m_Overtime, type = 'scatter', 
+               mode = 'lines')%>% 
+               layout(showlegend = F, title = 'R1 invested in the Market Cap Weighted Portfolio',
+                xaxis = list(title = 'Date'),yaxis = list(title = 'Market Cap Weighted Return over the next month (RON1m) '),
+                 plot_bgcolor='#e5ecf6')
+
+fig
+```  
+    
+### __Task 9__    
+    
+Grouped on a monthly basis and using the ROE column, calculate the Z-Score for every stock at each
+point in time.  
+Replace missing values with zeroes  
+The name for the resulting column should be “Z_ROE”  
+Winsorise outlier Z-scores at 3  
+  
+__Definition:__ Z-score, sometimes called standard score, is a measurement of how many standard deviations a point is away from the mean of its data set.  
+  
+```{r} 
+z_score_data = TOP40 %>%  #source original data
+                mutate(ROE = replace_na(ROE,0))%>% #remove NA in ROE
+                group_by(date)%>% #group by month
+                mutate(Z_ROE = (ROE-mean(ROE))/sd(ROE))%>% #calculate Z-ROE
+                mutate(Z_ROE_winsor = winsorZ(Z_ROE, zbound = 3)) %>% #Winsorise at 3
+                select(date, Ticker, ROE, Z_ROE, Z_ROE_winsor) #Subset data
+
+#output table
+rhandsontable(z_score_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)
+
+```  
+  
+### __Task 10__  
+  
+Plot the Z-score for both ‘Anglo American PLC’ and ‘MTN Group Ltd’ through time  
+  
+```{r}
+
+#plot output
+z_scoreplot =  z_score_data %>%
+                filter(Ticker == 'MTN Group Ltd' | Ticker == 'Anglo American PLC')%>%
+                select(date, Ticker,  Z_ROE)
+ 
+z_scoreplot = ggplot(z_scoreplot, aes(x = as.Date(date), y = Z_ROE)) + 
+              geom_line(aes(color = Ticker, linetype = Ticker)) + ylab("Z-score") + xlab("Date")+
+              scale_color_manual(values = c("darkred", "darkblue"))
+
+ggplotly(z_scoreplot)
+```  
+  
+### __Task 11__   
+  
+Narrow the dataset to only the following columns  
+- date  
+- Ticker  
+- MOMENTUM  
+- QUALITY  
+- RON1m  
+  
+Replace missing values with Zero  
+Calculate the Rank (highest value = 1) per month for every stock for the 3 variables  
+  
+
+```{r}
+ranked_data =  TOP40 %>%   #source original data
+                select(date, Ticker, MOMENTUM, QUALITY, RON1m)%>% #replace NA with 0
+                mutate(MOMENTUM = replace_na(MOMENTUM,0))%>%#replace NA with 0
+                mutate(QUALITY = replace_na(QUALITY,0))%>% #replace NA with 0
+                mutate(RON1m = replace_na(RON1m,0))%>%#replace NA with 0
+                arrange(MOMENTUM, QUALITY, RON1m) #rank data by 3 variables  
+
+#table output
+rhandsontable(ranked_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)
+
+```  
+  
+
+
+  
+### __Task 12__  
+  
+Calculate the correlation between the ranked variables (QUALITY and MOMENTUM) and ranked
+RON1m over all dates  
+    
+  
+```{r}
+
+correlation_data =  ranked_data %>% #source data from previous code chunk (this might not be the best practice for scale systems)    
+                    mutate(Cor_Quality_RON1m = cor(QUALITY, RON1m, method ='spearman'))%>% # apply spearman correlation between QUALITY and RON1m
+                    mutate(Cor_Momentum_RON1m = cor(MOMENTUM, RON1m, method ='spearman'))%>%# apply spearman correlation between MOMENTUM and RON1m
+                    select(date, Ticker, Cor_Quality_RON1m,Cor_Momentum_RON1m) # subset data
+ #table output
+rhandsontable(correlation_data,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)
+```  
+  
+Commentary:  
+  
+Information Coefficient evaluates the skills of the portfolio manager at how closely their forecasts are to the actuals 
+IC values range from -1 to 1 with -1 indicating that the manager fails at making correct predictions whilst 1 is the converse.  
+IC value of 0 means that there's no linear relationship  
+Since the value IC value is 0.02917685 and 0.0464988 this shows that the Manager is generally performing better  
+  
+Why would we use the Spearman (ranked) correlation as opposed to the more usual Pearson correlation  
+  
+We use the Spearman (ranked) correlation method because the variables MOMENTUM, QUALITY, RON1m are not normaly distributed thus we have to use non-parametric correlation  
+  
+We can test for normality using shapiro-wilk test and qqplot  
+  
+ 
+
+  
+### __Task 12b (Bonus)__  
+  
+```{r}
+#column called variables
+variables = c("QUALITY","MOMENTUM")
+#column named Accumulated IC
+Accumulated_IC = c(sum(correlation_data$Cor_Quality_RON1m),sum(correlation_data$Cor_Momentum_RON1m))
+#create comparison dataframe
+df_comparison = data.frame(variables,Accumulated_IC) 
+ 
+#generate a plot
+correlation_plot = ggplot(data=df_comparison, aes(x=variables , y=Accumulated_IC)) +
+  geom_bar(stat="identity", fill="steelblue")+ ylab("Accumulated Information Coefficient Over Time") + xlab("Portfolios")+
+  theme_minimal()
+
+ggplotly(correlation_plot)
+
+```  
+  
+From the accumulated information coefficient above its clear that MOMENTUM has the best ability to forecast future returns  
+  
+### __Task 13__  
+  
+Using the IC data for the two variables, calculate a t-statistic for each
+  
+```{r}
+#reference: https://stats.stackexchange.com/questions/17281/what-does-t-statistics-of-information-coefficient-indicate
+#results confirmed with https://www.researchgate.net/post/Can-we-test-the-significance-of-spearman-correlation-using-t-test
+
+#statistic for the 1-sample t-test
+ sqrt(NROW(correlation_data))*correlation_data$Cor_Quality_RON1m[1]
+ sqrt(NROW(correlation_data))*correlation_data$Cor_Momentum_RON1m[1]
+
+```  
+   
+T test values for QUALITY and MOMENTUM are 2.622673 and 4.179722 respectively  
+  
+Comment on and infer a confidence level for using each of the two variables to invest client money
+with.
+
+```{r}
+  
+cor.test(ranked_data$MOMENTUM, ranked_data$RON1m,
+         method = "spearman", exact = F)
+#----------------
+cor.test(ranked_data$QUALITY, ranked_data$RON1m,
+         method = "spearman", exact = F)
+```  
+  
+__MOMENTUM portfolio analysis:__  
+  
+From the Spearman correlation coefficient rho is 0.0464988, since the coefficient value is positive this means that theres a
+positive correlation between the 2 variables MOMENTUM and RON1m. The p value is very small below the alpha level of 0.05, as a result we will  
+reject the null and accept the alternative in that theres a significant positive correlation between MOMENTUM and RO1m
+  
+__QUALITY portfolio analysis:__  
+  
+From the Spearman correlation coefficient rho is 0.02917685, since the coefficient value is positive this means that theres a   
+positive correlation between the 2 variables QUALITY and RON1m. The p value however is large just above the alpha level of 0.05, as a result we fail to
+reject the null in that theres no a significant positive correlation between MOMENTUM and RO1m.
+  
+As a result, for investing clients money we are statistically confident that MOMENTUM portfolio will the way to go at a 5% leve of significance.  
+  
+### __Task 14__  
+  
+Build an equally weighted portfolio every month of the 10 stocks with the highest MOMENTUM  
+  
+  
+```{r}
+stock_picks = ranked_data%>% #source ranked data from previous chunk
+              group_by(date)%>%#group by month
+              slice_max(MOMENTUM, n=10) #select top 10 stocks with highest momentum per month
+ #table output
+rhandsontable(stock_picks,height = "30vh",
+              readOnly = TRUE,search = TRUE)%>%
+              hot_cols(columnSorting = TRUE,highlightCol = TRUE, highlightRow = TRUE,
+              manualColumnResize = T)
+```  
+  
+### __Task 14b (Bonus Question)__    
+  
+Using the result from Step 14, plot the value of R1 invested at the start of the analysis in the 10 stock
+MOMENTUM portfolio, over time.  
+   
+  
+```{r}
+
+R1_stock_picks_RON1m = stock_picks %>% #source data from previous chunk
+                        group_by(date) %>%  #group by month
+                        summarise(Momentum_RON1m = sum(MOMENTUM*RON1m,na.rm = T))%>%  # momentum weighting
+                          mutate(MOMENTUM_RON1m_Overtime = 1+cumsum(Momentum_RON1m)) # cummulative sum on 1 Rands investment
+ #plot output
+R1_stock_picks_RON1m_plot = ggplot(R1_stock_picks_RON1m, aes(x=as.Date(date), y=MOMENTUM_RON1m_Overtime)) +
+                            ylab("R1 invested on the MOMENTUM portfolio") + xlab("Date")+
+                              geom_line(colour ='blue')
+ 
+ggplotly(R1_stock_picks_RON1m_plot)
+```  
+  
+### __Task 15 (Bonus Question)__    
+  
+Using the result from Step 8b and 14b, graphically compare the performance of the 10 stock MOMENTUM portfolio to the Market Cap weighted portfolio.
+
+```{r}
+ 
+#rename columns to avoid join conflict
+colnames(R1investmentMWP_data) = c('date','MarketCapweight_RON1m','MarketCapweight_Overtime')
+
+joined_df = left_join(R1investmentMWP_data,R1_stock_picks_RON1m) #join 2 dataframes
+
+#plot output
+joined_plot = ggplot(joined_df, aes(as.Date(date))) + 
+  geom_line(aes(y =  MarketCapweight_Overtime, colour = "Market Cap weighted portfolio")) + 
+  geom_line(aes(y =  MOMENTUM_RON1m_Overtime, colour = "MOMENTUM portfolio"))+
+  ylab("Value in Rands") + xlab("Date") 
+ggplotly(joined_plot)
+ 
+```  
